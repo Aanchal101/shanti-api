@@ -79,11 +79,10 @@ def check(
                 assert _v not in _check_func_val
             else:
                 assert _check_func_val not in (_v,)
+        elif _reverse:
+            assert _v in _check_func_val
         else:
-            if _reverse:
-                assert _v in _check_func_val
-            else:
-                assert _check_func_val in (_v,)
+            assert _check_func_val in (_v,)
 
     if isinstance(value, (six.string_types, int)):
         value = (value,)
@@ -249,9 +248,7 @@ def new_torrent_standalone(client, torrent_hash=torrent1_hash, **kwargs):
 @pytest.fixture(scope="session")
 def app_version(client):
     """qBittorrent App Version being used for testing"""
-    if qbt_version != "v":
-        return qbt_version
-    return client.app_version()
+    return qbt_version if qbt_version != "v" else client.app_version()
 
 
 @pytest.fixture(scope="session")

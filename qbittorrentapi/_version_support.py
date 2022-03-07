@@ -78,7 +78,7 @@ class Version(object):
         """
         app_version = app_version.lower()
         if not app_version.startswith("v"):
-            app_version = "v" + app_version
+            app_version = f"v{app_version}"
         return app_version in cls.supported_app_versions()
 
     @classmethod

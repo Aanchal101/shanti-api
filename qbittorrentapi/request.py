@@ -150,8 +150,10 @@ class Request(object):
             )
             self._password = environ["PYTHON_QBITTORRENTAPI_PASSWORD"]
         if (
-            self._VERIFY_WEBUI_CERTIFICATE is True
-            and environ.get("PYTHON_QBITTORRENTAPI_DO_NOT_VERIFY_WEBUI_CERTIFICATE")
+            self._VERIFY_WEBUI_CERTIFICATE
+            and environ.get(
+                "PYTHON_QBITTORRENTAPI_DO_NOT_VERIFY_WEBUI_CERTIFICATE"
+            )
             is not None
         ):
             self._VERIFY_WEBUI_CERTIFICATE = False
@@ -222,7 +224,7 @@ class Request(object):
             """
             if retry_count > 0:
                 backoff_time = _retry_backoff_factor * (2 ** ((retry_count + 1) - 1))
-                sleep(backoff_time if backoff_time <= 10 else 10)
+                sleep(min(backoff_time, 10))
             logger.debug("Retry attempt %d", retry_count + 1)
 
         max_retries = _retries if _retries >= 1 else 1
@@ -402,7 +404,7 @@ class Request(object):
 
             # Parse user host - urlparse requires some sort of schema for parsing to work at all
             if not host.lower().startswith(("http:", "https:", "//")):
-                host = "//" + host
+                host = f"//{host}"
             base_url = urlparse(url=host)
             logger.debug("Parsed user URL: %r", base_url)
 
@@ -456,7 +458,7 @@ class Request(object):
             # ensure URL always ends with a forward-slash
             base_url = base_url.geturl()
             if not base_url.endswith("/"):
-                base_url = base_url + "/"
+                base_url = f'{base_url}/'
             logger.debug("Base URL: %s", base_url)
 
             # force a new session to be created now that the URL is known
@@ -642,11 +644,7 @@ class Request(object):
         """Log verbose information about request. Can be useful during development."""
         if self._VERBOSE_RESPONSE_LOGGING:
             resp_logger = logger.debug
-            max_text_length_to_log = 254
-            if response.status_code != 200:
-                # log as much as possible in an error condition
-                max_text_length_to_log = 10000
-
+            max_text_length_to_log = 10000 if response.status_code != 200 else 254
             resp_logger("Request URL: (%s) %s", http_method.upper(), response.url)
             resp_logger("Request HTTP Args: %s", http_args)
             resp_logger("Request Headers: %s", response.request.headers)
@@ -654,11 +652,7 @@ class Request(object):
                 str(response.request.body) not in ("None", "")
                 and "auth/login" not in url
             ):
-                body_len = (
-                    max_text_length_to_log
-                    if len(response.request.body) > max_text_length_to_log
-                    else len(response.request.body)
-                )
+                body_len = min(len(response.request.body), max_text_length_to_log)
                 resp_logger(
                     "Request body: %s%s",
                     response.request.body[:body_len],
@@ -669,11 +663,7 @@ class Request(object):
                 "Response status: %s (%s)", response.status_code, response.reason
             )
             if response.text:
-                text_len = (
-                    max_text_length_to_log
-                    if len(response.text) > max_text_length_to_log
-                    else len(response.text)
-                )
+                text_len = min(len(response.text), max_text_length_to_log)
                 resp_logger(
                     "Response text: %s%s",
                     response.text[:text_len],
