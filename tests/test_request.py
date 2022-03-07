@@ -120,11 +120,12 @@ def test_force_user_scheme(client, app_version, use_https):
     _enable_disable_https(client, use_https)
 
     client = Client(
-        host="http://" + default_host,
+        host=f"http://{default_host}",
         VERIFY_WEBUI_CERTIFICATE=False,
         FORCE_SCHEME_FROM_HOST=True,
         REQUESTS_ARGS={"timeout": 3},
     )
+
     if use_https:
         with pytest.raises(exceptions.APIConnectionError):
             assert client.app.version == app_version
@@ -145,11 +146,12 @@ def test_force_user_scheme(client, app_version, use_https):
         assert client._API_BASE_URL.startswith("http://")
 
     client = Client(
-        host="https://" + default_host,
+        host=f"https://{default_host}",
         VERIFY_WEBUI_CERTIFICATE=False,
         FORCE_SCHEME_FROM_HOST=True,
         REQUESTS_ARGS={"timeout": 3},
     )
+
     if not use_https:
         with pytest.raises(exceptions.APIConnectionError):
             assert client.app.version == app_version

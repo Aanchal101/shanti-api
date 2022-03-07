@@ -176,64 +176,67 @@ def test_upload_limit(orig_torrent, client_func):
 
 @pytest.mark.parametrize("client_func", ("set_location", "setLocation"))
 def test_set_location(api_version, new_torrent, client_func):
-    if v(api_version) > v("2.0.1"):
-        exp = None
-        for attempt in range(2):
-            try:
-                loc = mkpath("~/Downloads/3/")
-                getattr(new_torrent, client_func)(loc)
-                check(
-                    lambda: mkpath(new_torrent.info.save_path),
-                    mkpath(loc),
-                    any=True,
-                )
-                break
-            except AssertionError as e:
-                exp = e
-        if exp:
-            raise exp
+    if v(api_version) <= v("2.0.1"):
+        return
+    exp = None
+    for _ in range(2):
+        try:
+            loc = mkpath("~/Downloads/3/")
+            getattr(new_torrent, client_func)(loc)
+            check(
+                lambda: mkpath(new_torrent.info.save_path),
+                mkpath(loc),
+                any=True,
+            )
+            break
+        except AssertionError as e:
+            exp = e
+    if exp:
+        raise exp
 
 
 @pytest.mark.parametrize("client_func", ("set_save_path", "setSavePath"))
 def test_set_save_path(api_version, new_torrent, client_func):
-    if v(api_version) >= v("2.8.4"):
-        exp = None
-        for attempt in range(2):
-            try:
-                loc = mkpath("~/Downloads/savepath3/")
-                getattr(new_torrent, client_func)(loc)
-                # qBittorrent may return trailing separators depending on version....
-                check(
-                    lambda: mkpath(new_torrent.info.save_path),
-                    mkpath(loc),
-                    any=True,
-                )
-                break
-            except AssertionError as e:
-                exp = e
-        if exp:
-            raise exp
+    if v(api_version) < v("2.8.4"):
+        return
+    exp = None
+    for _ in range(2):
+        try:
+            loc = mkpath("~/Downloads/savepath3/")
+            getattr(new_torrent, client_func)(loc)
+            # qBittorrent may return trailing separators depending on version....
+            check(
+                lambda: mkpath(new_torrent.info.save_path),
+                mkpath(loc),
+                any=True,
+            )
+            break
+        except AssertionError as e:
+            exp = e
+    if exp:
+        raise exp
 
 
 @pytest.mark.parametrize("client_func", ("set_download_path", "setDownloadPath"))
 def test_set_download_path(api_version, new_torrent, client_func):
-    if v(api_version) >= v("2.8.4"):
-        exp = None
-        for attempt in range(2):
-            try:
-                loc = mkpath("~/Downloads/downloadpath3/")
-                getattr(new_torrent, client_func)(loc)
-                # qBittorrent may return trailing separators depending on version....
-                check(
-                    lambda: mkpath(new_torrent.info.download_path),
-                    mkpath(loc),
-                    any=True,
-                )
-                break
-            except AssertionError as e:
-                exp = e
-        if exp:
-            raise exp
+    if v(api_version) < v("2.8.4"):
+        return
+    exp = None
+    for _ in range(2):
+        try:
+            loc = mkpath("~/Downloads/downloadpath3/")
+            getattr(new_torrent, client_func)(loc)
+            # qBittorrent may return trailing separators depending on version....
+            check(
+                lambda: mkpath(new_torrent.info.download_path),
+                mkpath(loc),
+                any=True,
+            )
+            break
+        except AssertionError as e:
+            exp = e
+    if exp:
+        raise exp
 
 
 @pytest.mark.parametrize("client_func", ("set_category", "setCategory"))
@@ -394,7 +397,7 @@ def test_rename_file(api_version, app_version, new_torrent, client_func, name):
 
     if v(app_version) >= v("v4.3.3"):
         curr_name = new_torrent.files[0].name
-        new_name = "NEW_" + name
+        new_name = f"NEW_{name}"
         getattr(new_torrent, client_func)(old_path=curr_name, new_path=new_name)
         check(lambda: new_torrent.files[0].name, new_name)
 
@@ -411,9 +414,9 @@ def test_rename_folder(api_version, app_version, new_torrent, client_func, name)
         orig_file_path = new_torrent.files[0].name
         new_folder = "qwer"
         new_torrent.rename_file(
-            old_path=orig_file_path,
-            new_path=new_folder + "/" + orig_file_path,
+            old_path=orig_file_path, new_path=f'{new_folder}/{orig_file_path}'
         )
+
         sleep(1)  # qBittorrent crashes if you make these calls too fast...
         # test rename that new folder
         getattr(new_torrent, client_func)(
@@ -422,7 +425,7 @@ def test_rename_folder(api_version, app_version, new_torrent, client_func, name)
         )
         check(
             lambda: new_torrent.files[0].name.replace("+", " "),
-            name + "/" + orig_file_path,
+            f'{name}/{orig_file_path}',
         )
 
 

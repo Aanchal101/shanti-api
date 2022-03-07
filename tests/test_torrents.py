@@ -148,10 +148,10 @@ def test_add_delete(client, api_version, client_func):
     def add_by_filehandles(single):
         download_file(url=torrent1_url, filename=torrent1_filename)
         download_file(url=torrent2_url, filename=torrent2_filename)
-        files = (
-            open(mkpath("~/" + torrent1_filename), "rb"),
-            open(mkpath("~/" + torrent2_filename), "rb"),
+        files = open(mkpath(f"~/{torrent1_filename}"), "rb"), open(
+            mkpath(f"~/{torrent2_filename}"), "rb"
         )
+
 
         if single:
             assert get_func(client, client_func[0])(torrent_files=files[0]) == "Ok."
@@ -284,18 +284,15 @@ def test_add_options(client, api_version, keep_root_folder, content_layout):
     if v(api_version) >= v("2.6.2"):
         check(lambda: torrent.info.tags, "option-tag")
 
-    if v(api_version) >= v("2.7"):
-        # after web api v2.7...root dir is driven by content_layout
-        if content_layout is None:
-            should_root_dir_exists = keep_root_folder in {None, True}
-        else:
-            should_root_dir_exists = content_layout in {"Original", "Subfolder"}
+    if (
+        v(api_version) >= v("2.7")
+        and content_layout is None
+        or v(api_version) < v("2.7")
+        and (content_layout is None or keep_root_folder is not None)
+    ):
+        should_root_dir_exists = keep_root_folder in {None, True}
     else:
-        # before web api v2.7...it is driven by is_root_folder
-        if content_layout is not None and keep_root_folder is None:
-            should_root_dir_exists = content_layout in {"Original", "Subfolder"}
-        else:
-            should_root_dir_exists = keep_root_folder in {None, True}
+        should_root_dir_exists = content_layout in {"Original", "Subfolder"}
     check(
         lambda: any(f["name"].startswith("root_folder") for f in torrent.files),
         should_root_dir_exists,
@@ -474,7 +471,7 @@ def test_rename_file(
                 torrent_hash=new_torrent.hash, file_id=10, new_file_name=new_name
             )
         # post-v4.3.3 rename_file signature
-        new_new_name = new_name + "NEW"
+        new_new_name = f'{new_name}NEW'
         getattr(client, client_func)(
             torrent_hash=new_torrent.hash,
             old_path=new_torrent.files[0].name,
@@ -506,8 +503,9 @@ def test_rename_folder(client, app_version, new_torrent, new_name, client_func):
         client.torrents_rename_file(
             torrent_hash=new_torrent.hash,
             old_path=orig_file_path,
-            new_path=new_folder + "/" + orig_file_path,
+            new_path=f'{new_folder}/{orig_file_path}',
         )
+
         sleep(1)  # qBittorrent crashes if you make these calls too fast...
         # test rename that new folder
         getattr(client, client_func)(
@@ -517,7 +515,7 @@ def test_rename_folder(client, app_version, new_torrent, new_name, client_func):
         )
         check(
             lambda: new_torrent.files[0].name.replace("+", " "),
-            new_name + "/" + orig_file_path,
+            f'{new_name}/{orig_file_path}',
         )
 
 
@@ -989,19 +987,18 @@ def test_torrents_add_peers(client, api_version, orig_torrent, client_func, peer
     if v(api_version) < v("2.3.0"):
         with pytest.raises(NotImplementedError):
             get_func(client, client_func)(peers=peers, torrent_hashes=orig_torrent.hash)
-    else:
-        if all(map(lambda p: ":" not in p, peers)):
-            with pytest.raises(InvalidRequest400Error):
-                get_func(client, client_func)(
-                    peers=peers, torrent_hashes=orig_torrent.hash
-                )
-        else:
-            p = get_func(client, client_func)(
+    elif all(map(lambda p: ":" not in p, peers)):
+        with pytest.raises(InvalidRequest400Error):
+            get_func(client, client_func)(
                 peers=peers, torrent_hashes=orig_torrent.hash
             )
-            # can only actually verify the peer was added if it's a valid peer
-            # check(lambda: client.sync_torrent_peers(torrent_hash=orig_torrent_hash)['peers'], peers, reverse=True)
-            assert isinstance(p, TorrentsAddPeersDictionary)
+    else:
+        p = get_func(client, client_func)(
+            peers=peers, torrent_hashes=orig_torrent.hash
+        )
+        # can only actually verify the peer was added if it's a valid peer
+        # check(lambda: client.sync_torrent_peers(torrent_hash=orig_torrent_hash)['peers'], peers, reverse=True)
+        assert isinstance(p, TorrentsAddPeersDictionary)
 
 
 def _categories_save_path_key(api_version):
@@ -1009,9 +1006,7 @@ def _categories_save_path_key(api_version):
     With qBittorrent 4.4.0 (Web API 2.8.4), the key in the category
     definition returned changed from savePath to save_path....
     """
-    if v(api_version) == v("2.8.4"):
-        return "save_path"
-    return "savePath"
+    return "save_path" if v(api_version) == v("2.8.4") else "savePath"
 
 
 def test_categories1(client, api_version):
@@ -1123,8 +1118,8 @@ def test_edit_category(
             client.torrents_create_category(
                 name=name, save_path="/tmp/savetmp", download_path="/tmp/savetmp"
             )
-            save_path = mkpath(filepath + "save/")
-            download_path = mkpath(filepath + "down/")
+            save_path = mkpath(f'{filepath}save/')
+            download_path = mkpath(f'{filepath}down/')
             get_func(client, client_func)(
                 name=name,
                 save_path=save_path,

@@ -23,7 +23,7 @@ def test_is_supported(app_version, api_version):
     assert Version.is_app_version_supported("0.0.0") is False
 
     assert Version.is_api_version_supported(api_version) is True
-    assert Version.is_api_version_supported("v" + api_version) is True
+    assert Version.is_api_version_supported(f"v{api_version}") is True
     assert Version.is_api_version_supported("0.0.0") is False
 
 

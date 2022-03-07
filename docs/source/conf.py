@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath("../.."))
 from datetime import datetime
 
 project = "qbittorrent-api"
-copyright = "%s, Russell Martin" % datetime.today().year
+copyright = "%s, Russell Martin" % datetime.now().year
 author = "Russell Martin"
 
 # The full version, including alpha/beta/rc tags
